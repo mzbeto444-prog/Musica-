@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exames Topo - Download</title>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        body {
+            background: #f0f4f8;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        header {
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+            color: white;
+            padding: 2rem 1rem;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        header h1 { font-size: 2.8rem; letter-spacing: 2px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
+        header p { font-size: 1.2rem; opacity: 0.9; margin-top: 0.5rem; }
+        .container { max-width: 1200px; margin: 2rem auto; padding: 0 1.5rem; flex: 1; }
+        .search-box { display: flex; justify-content: center; margin-bottom: 2.5rem; }
+        .search-box input {
+            width: 100%; max-width: 500px; padding: 0.9rem 1.5rem;
+            border: none; border-radius: 50px; font-size: 1rem;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            transition: 0.3s; outline: none;
+        }
+        .search-box input:focus { box-shadow: 0 4px 16px rgba(0,0,0,0.2); }
+        .exam-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.8rem;
+        }
+        .exam-card {
+            background: white;
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            flex-direction: column;
+            border-left: 6px solid #1a2a6c;
+        }
+        .exam-card:hover { transform: translateY(-5px); box-shadow: 0 12px 28px rgba(0,0,0,0.15); }
+        .exam-card .exam-title { font-size: 1.3rem; font-weight: 600; color: #1a2a6c; margin-bottom: 0.3rem; }
+        .exam-card .exam-year { font-size: 0.95rem; color: #555; margin-bottom: 0.8rem; display: flex; align-items: center; gap: 0.5rem; }
+        .exam-card .exam-year i { color: #b21f1f; }
+        .exam-card .exam-description { font-size: 0.95rem; color: #444; margin-bottom: 1.2rem; flex: 1; }
+        .exam-card .download-btn {
+            background: #1a2a6c;
+            color: white;
+            border: none;
+            padding: 0.7rem 1.2rem;
+            border-radius: 50px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s, transform 0.1s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.6rem;
+            text-decoration: none;
+            align-self: flex-start;
+        }
+        .exam-card .download-btn:hover { background: #b21f1f; }
+        .exam-card .download-btn:active { transform: scale(0.96); }
+        .no-results { text-align: center; font-size: 1.2rem; color: #777; padding: 3rem 0; display: none; }
+        footer {
+            background: #1a2a6c;
+            color: white;
+            text-align: center;
+            padding: 1.5rem;
+            margin-top: 2rem;
+            font-size: 0.9rem;
+        }
+        footer a { color: #fdbb2d; text-decoration: none; }
+
+        /* Modal de download */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(4px);
+            display: none; /* hidden by default */
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-box {
+            background: white;
+            border-radius: 20px;
+            max-width: 420px;
+            width: 90%;
+            padding: 2rem 1.8rem;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            animation: modalFade 0.3s ease;
+        }
+        @keyframes modalFade {
+            from { transform: scale(0.9); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        .modal-box .modal-icon {
+            text-align: center;
+            font-size: 3rem;
+            color: #fdbb2d;
+            margin-bottom: 0.5rem;
+        }
+        .modal-box h3 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #1a2a6c;
+            margin-bottom: 0.8rem;
+            text-align: center;
+        }
+        .modal-box .file-info {
+            background: #f0f4f8;
+            padding: 0.8rem;
+            border-radius: 12px;
+            margin: 1rem 0;
+            font-size: 0.95rem;
+            text-align: center;
+        }
+        .modal-box .file-info strong { color: #1a2a6c; }
+        .modal-box .file-info .size { color: #555; }
+        .modal-box .progress-area {
+            margin: 1.2rem 0;
+            display: none; /* aparece durante o download */
+        }
+        .modal-box .progress-area .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 0.4rem;
+        }
+        .modal-box .progress-area .progress-fill {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #1a2a6c, #b21f1f);
+            border-radius: 10px;
+            transition: width 0.2s;
+        }
+        .modal-box .progress-area .status-text {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            color: #333;
+        }
+        .modal-actions {
+            display: flex;
+            gap: 0.8rem;
+            justify-content: flex-end;
+            margin-top: 1.5rem;
+        }
+        .modal-actions button {
+            padding: 0.6rem 1.8rem;
+            border: none;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .modal-actions .btn-cancel {
+            background: #e0e0e0;
+            color: #444;
+        }
+        .modal-actions .btn-cancel:hover { background: #ccc; }
+        .modal-actions .btn-download {
+            background: #1a2a6c;
+            color: white;
+        }
+        .modal-actions .btn-download:hover { background: #b21f1f; }
+        .modal-actions .btn-download:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        @media (max-width: 600px) {
+            header h1 { font-size: 2rem; }
+            .exam-grid { grid-template-columns: 1fr; }
+            .modal-box { padding: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1><i class="fas fa-graduation-cap"></i> Exames Topo</h1>
+    <p>Baixe os melhores exames para sua preparação</p>
+</header>
+
+<div class="container">
+    <div class="search-box">
+        <input type="text" id="searchInput" placeholder="🔍 Filtrar por nome, ano ou matéria..." onkeyup="filterExams()">
+    </div>
+    <div id="examGrid" class="exam-grid"></div>
+    <div id="noResults" class="no-results">
+        <i class="fas fa-search" style="font-size: 2rem; display: block; margin-bottom: 0.5rem;"></i>
+        Nenhum exame encontrado.
+    </div>
+</div>
+
+<!-- Modal de download -->
+<div id="downloadModal" class="modal-overlay">
+    <div class="modal-box">
+        <div class="modal-icon"><i class="fas fa-file-pdf"></i></div>
+        <h3>Fazer o download do arquivo novamente?</h3>
+        <div class="file-info">
+            <strong id="modalFileName">Texto_de_apoio_Tecidos Animais.pdf</strong><br>
+            <span class="size" id="modalFileSize">(597.48 KB)</span>
+        </div>
+        <!-- Área de progresso (inicialmente oculta) -->
+        <div id="progressArea" class="progress-area">
+            <div class="status-text">
+                <span id="progressLabel">Fazendo o download...</span>
+                <span id="progressPercent">0%</span>
+            </div>
+            <div class="progress-bar">
+                <div id="progressFill" class="progress-fill" style="width: 0%;"></div>
+            </div>
+            <p style="margin-top: 0.5rem; font-size: 0.9rem; color: #b21f1f;" id="pendingMessage">Download pendente.</p>
+        </div>
+        <div class="modal-actions">
+            <button class="btn-cancel" id="cancelBtn">Cancelar</button>
+            <button class="btn-download" id="confirmDownloadBtn">Fazer o download novamente</button>
+        </div>
+    </div>
+</div>
+
+<footer>
+    <p>&copy; 2026 Exames Topo - Todos os direitos reservados. | Feito com <i class="fas fa-heart" style="color: #fdbb2d;"></i> para estudantes</p>
+</footer>
+
+<script>
+    // === DADOS DOS EXAMES ===
+    const exams = [
+        {
+            id: 1,
+            title: "ENEM 2025",
+            year: "2025",
+            subject: "Geral",
+            description: "Prova completa do Enem 2025 com todas as áreas do conhecimento.",
+            fileName: "enem_2025_completo.pdf",
+            fileSize: "2.4 MB"
+        },
+        {
+            id: 2,
+            title: "Vestibular USP 2026",
+            year: "2026",
+            subject: "Geral",
+            description: "Questões da primeira fase da Fuvest 2026.",
+            fileName: "fuvest_2026_1fase.pdf",
+            fileSize: "1.8 MB"
+        },
+        {
+            id: 3,
+            title: "ENEM 2024 - Matemática",
+            year: "2024",
+            subject: "Matemática",
+            description: "Caderno de matemática do Enem 2024 com resolução comentada.",
+            fileName: "enem_2024_matematica.pdf",
+            fileSize: "3.1 MB"
+        },
+        {
+            id: 4,
+            title: "Vestibular UNICAMP 2025",
+            year: "2025",
+            subject: "Geral",
+            description: "Prova de conhecimentos gerais da Unicamp 2025.",
+            fileName: "unicamp_2025_geral.pdf",
+            fileSize: "2.0 MB"
+        },
+        {
+            id: 5,
+            title: "ENEM 2023 - Redação",
+            year: "2023",
+            subject: "Redação",
+            description: "Temas e propostas de redação do Enem 2023 com dicas.",
+            fileName: "enem_2023_redacao.pdf",
+            fileSize: "1.2 MB"
+        },
+        {
+            id: 6,
+            title: "Simulado ENEM 2026 - 1º dia",
+            year: "2026",
+            subject: "Geral",
+            description: "Simulado completo para o primeiro dia do Enem 2026.",
+            fileName: "simulado_enem_2026_dia1.pdf",
+            fileSize: "2.9 MB"
+        }
+    ];
+
+    // === ELEMENTOS DO MODAL ===
+    const modal = document.getElementById('downloadModal');
+    const modalFileName = document.getElementById('modalFileName');
+    const modalFileSize = document.getElementById('modalFileSize');
+    const progressArea = document.getElementById('progressArea');
+    const progressFill = document.getElementById('progressFill');
+    const progressLabel = document.getElementById('progressLabel');
+    const progressPercent = document.getElementById('progressPercent');
+    const pendingMessage = document.getElementById('pendingMessage');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const confirmBtn = document.getElementById('confirmDownloadBtn');
+
+    let currentFile = null;       // guarda o arquivo atual para download
+    let downloadInterval = null;  // para simular progresso
+
+    // === FUNÇÕES DO MODAL ===
+    function openModal(fileName, fileSize) {
+        modalFileName.textContent = fileName;
+        modalFileSize.textContent = `(${fileSize})`;
+        // Resetar progresso
+        progressArea.style.display = 'none';
+        progressFill.style.width = '0%';
+        progressPercent.textContent = '0%';
+        pendingMessage.style.display = 'none';
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = 'Fazer o download novamente';
+        // Mostra o modal
+        modal.classList.add('active');
+    }
+
+    function closeModal() {
+        modal.classList.remove('active');
+        if (downloadInterval) {
+            clearInterval(downloadInterval);
+            downloadInterval = null;
+        }
+    }
+
+    // Simula o download com progresso
+    function startDownload() {
+        // Mostra a área de progresso
+        progressArea.style.display = 'block';
+        pendingMessage.style.display = 'block';
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = 'Baixando...';
+        let progress = 0;
+
+        if (downloadInterval) clearInterval(downloadInterval);
+
+        downloadInterval = setInterval(() => {
+            // Simula aumento aleatório até 100%
+            const increment = Math.floor(Math.random() * 15) + 3;
+            progress = Math.min(progress + increment, 100);
+            progressFill.style.width = progress + '%';
+            progressPercent.textContent = progress + '%';
+
+            // Atualiza a mensagem de status
+            if (progress < 100) {
+                progressLabel.textContent = 'Fazendo o download...';
+                pendingMessage.textContent = 'Download em andamento...';
+            } else {
+                // Quando chega a 100%, finaliza
+                clearInterval(downloadInterval);
+                downloadInterval = null;
+                progressLabel.textContent = 'Download concluído!';
+                pendingMessage.textContent = 'Arquivo baixado com sucesso.';
+                confirmBtn.disabled = false;
+                confirmBtn.textContent = 'Fechar';
+                // Após 1.5s, fecha o modal automaticamente (opcional)
+                setTimeout(() => {
+                    closeModal();
+                }, 1500);
+            }
+        }, 300);
+    }
+
+    // === EVENTOS DO MODAL ===
+    cancelBtn.addEventListener('click', () => {
+        if (downloadInterval) {
+            clearInterval(downloadInterval);
+            downloadInterval = null;
+        }
+        closeModal();
+    });
+
+    confirmBtn.addEventListener('click', () => {
+        // Se o download já foi concluído e o botão diz "Fechar", apenas fecha
+        if (confirmBtn.textContent === 'Fechar') {
+            closeModal();
+            return;
+        }
+        // Caso contrário, inicia o download (simulação)
+        startDownload();
+    });
+
+    // Fecha o modal ao clicar fora dele (no overlay)
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            if (downloadInterval) clearInterval(downloadInterval);
+            closeModal();
+        }
+    });
+
+    // === GERAR CARDS E FILTRO ===
+    function renderExams(filtered) {
+        const grid = document.getElementById('examGrid');
+        const noResults = document.getElementById('noResults');
+        grid.innerHTML = '';
+
+        if (filtered.length === 0) {
+            noResults.style.display = 'block';
+            return;
+        }
+        noResults.style.display = 'none';
+
+        filtered.forEach(exam => {
+            const card = document.createElement('div');
+            card.className = 'exam-card';
+            card.innerHTML = `
+                <div class="exam-title">${exam.title}</div>
+                <div class="exam-year"><i class="fas fa-calendar-alt"></i> ${exam.year} · ${exam.subject}</div>
+                <div class="exam-description">${exam.description}</div>
+                <button class="download-btn" data-id="${exam.id}">
+                    <i class="fas fa-download"></i> Baixar
+                </button>
+            `;
+            grid.appendChild(card);
+        });
+
+        // Adiciona evento de clique em cada botão "Baixar"
+        document.querySelectorAll('.download-btn').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const id = parseInt(this.dataset.id);
+                const exam = exams.find(e => e.id === id);
+                if (exam) {
+                    currentFile = exam;
+                    openModal(exam.fileName, exam.fileSize);
+                }
+            });
+        });
+    }
+
+    function filterExams() {
+        const input = document.getElementById('searchInput');
+        const term = input.value.toLowerCase().trim();
+        let filtered = exams;
+        if (term !== '') {
+            filtered = exams.filter(exam =>
+                exam.title.toLowerCase().includes(term) ||
+                exam.year.includes(term) ||
+                exam.subject.toLowerCase().includes(term) ||
+                exam.description.toLowerCase().includes(term)
+            );
+        }
+        renderExams(filtered);
+    }
+
+    // Renderização inicial
+    renderExams(exams);
+</script>
+</body>
+      </html>
